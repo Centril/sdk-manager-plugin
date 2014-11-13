@@ -12,6 +12,9 @@ import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.api.tasks.StopExecutionException
 
+/**
+ * {@link SdkManagerPlugin} is the gradle {@link Plugin} class.
+ */
 class SdkManagerPlugin implements Plugin<Project> {
   final Logger log = Logging.getLogger SdkManagerPlugin
 
@@ -45,6 +48,13 @@ class SdkManagerPlugin implements Plugin<Project> {
     }
   }
 
+  /**
+   * Executes task closure and logs the
+   * time it took for it to run in nanoseconds.
+   *
+   * @param name the human readable name of the task.
+   * @param task the task closure to run.
+   */
   def time( String name, Closure task ) {
     long before = java.lang.System.nanoTime()
     task.run()
