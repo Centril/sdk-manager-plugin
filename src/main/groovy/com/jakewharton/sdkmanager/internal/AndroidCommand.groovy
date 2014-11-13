@@ -6,7 +6,16 @@ import org.gradle.api.logging.Logging
 import static com.android.SdkConstants.FD_TOOLS
 import static com.android.SdkConstants.androidCmdName
 
+/**
+ * {@link AndroidCommand} runs commands against the Android SDK Manager.
+ */
 interface AndroidCommand {
+  /**
+   * Runs an update command with the given filter.
+   *
+   * @param filter the filter to use.
+   * @return the exit value of the update command.
+   */
   int update(String filter);
 
   static final class Real implements AndroidCommand {
