@@ -4,4 +4,6 @@ local.properties
 .idea
 build
 *.iml
+*.ipr
+*.iws
 classes
