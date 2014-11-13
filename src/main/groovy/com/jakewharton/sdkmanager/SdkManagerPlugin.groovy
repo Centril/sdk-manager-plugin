@@ -1,11 +1,11 @@
 package com.jakewharton.sdkmanager
 
-import com.android.build.gradle.AppPlugin
-import com.android.build.gradle.LibraryPlugin
 import com.jakewharton.sdkmanager.internal.PackageResolver
 import com.jakewharton.sdkmanager.internal.SdkResolver
-import com.jakewharton.sdkmanager.internal.System
+
 import java.util.concurrent.TimeUnit
+
+import static com.jakewharton.sdkmanager.internal.Util.*
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.logging.Logger
@@ -45,19 +45,11 @@ class SdkManagerPlugin implements Plugin<Project> {
     }
   }
 
-  def time(String name, Closure task) {
+  def time( String name, Closure task ) {
     long before = java.lang.System.nanoTime()
     task.run()
     long after = java.lang.System.nanoTime()
-    long took = TimeUnit.NANOSECONDS.toMillis(after - before)
+    long took = TimeUnit.NANOSECONDS.toMillis( after - before )
     log.info "$name took $took ms."
-  }
-
-  static def hasAndroidPlugin(Project project) {
-    return project.plugins.hasPlugin(AppPlugin) || project.plugins.hasPlugin(LibraryPlugin)
-  }
-
-  static def isOfflineBuild(Project project) {
-    return project.getGradle().getStartParameter().isOffline()
   }
 }
