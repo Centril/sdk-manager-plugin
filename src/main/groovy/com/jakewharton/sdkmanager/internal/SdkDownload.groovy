@@ -13,12 +13,19 @@ import static org.rauschig.jarchivelib.ArchiveFormat.TAR
 import static org.rauschig.jarchivelib.ArchiveFormat.ZIP
 import static org.rauschig.jarchivelib.CompressionType.GZIP
 
-/** Manages platform-specific SDK downloads. */
+/**
+ * {@link SdkDownload} manages platform-specific SDK downloads.
+ */
 enum SdkDownload {
   WINDOWS('windows','zip'),
   LINUX('linux', 'tgz'),
   DARWIN('macosx', 'zip');
 
+  /**
+   * Returns the platform specific instance of {@SdkDownload}.
+   *
+   * @return an instance of {@SdkDownload}.
+   */
   static SdkDownload get() {
     switch (currentPlatform()) {
       case PLATFORM_WINDOWS:
@@ -36,12 +43,22 @@ enum SdkDownload {
   final String suffix
   final String ext
 
+  /**
+   * Constructs an instance given a suffix and extension.
+   *
+   * @param suffix The suffix to use in the download URL, e.g: the OS.
+   * @param ext The extension of the file to download.
+   */
   SdkDownload(String suffix, String ext) {
     this.suffix = suffix
     this.ext = ext
   }
 
-  /** Download the SDK to {@code temp} and extract to {@code dest}. */
+  /**
+   * Downloads the SDK to {@code temp} and extracts to {@code dest}.
+   *
+   * @param dest the location to extract SDK to.
+   */
   void download(File dest) {
     def url = "http://dl.google.com/android/android-sdk_r23-$suffix.$ext"
     log.debug "Downloading SDK from $url."
@@ -64,6 +81,11 @@ enum SdkDownload {
     temp.delete()
   }
 
+  /**
+   * Returns an archiver for the used extension/format.
+   *
+   * @return the archiver.
+   */
   def getArchiver() {
     switch (ext) {
       case 'zip':
