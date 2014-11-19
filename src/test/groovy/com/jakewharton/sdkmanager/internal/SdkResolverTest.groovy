@@ -1,5 +1,4 @@
 package com.jakewharton.sdkmanager.internal
-
 import com.jakewharton.sdkmanager.FixtureName
 import com.jakewharton.sdkmanager.TemporaryFixture
 import com.jakewharton.sdkmanager.util.FakeSystem
@@ -14,6 +13,8 @@ import org.junit.Test
 import static com.android.SdkConstants.ANDROID_HOME_ENV
 import static com.android.SdkConstants.FN_LOCAL_PROPERTIES
 import static com.android.SdkConstants.SDK_DIR_PROPERTY
+import static com.android.SdkConstants.currentPlatform
+import static com.android.SdkConstants.PLATFORM_WINDOWS
 import static org.fest.assertions.api.Assertions.assertThat
 import static org.fest.assertions.api.Assertions.failBecauseExceptionWasNotThrown
 
@@ -25,6 +26,7 @@ class SdkResolverTest {
   FakeSystem system
   RecordingDownloader downloader
   SdkResolver sdkResolver
+  boolean isWindows
 
   @Before public void setUp() {
     project = ProjectBuilder.builder()
@@ -35,11 +37,18 @@ class SdkResolverTest {
     system = new FakeSystem()
     system.properties.put 'user.home', fixture.root.absolutePath
 
+    isWindows = currentPlatform() == PLATFORM_WINDOWS
+
     downloader = new RecordingDownloader()
-    sdkResolver = new SdkResolver(project, system, downloader, false)
+
+    sdkResolver = new SdkResolver(project, system, downloader, isWindows)
   }
 
   def writeLocalProperties(String path) {
+    if ( isWindows ) {
+      path = path.replace "\\", "\\\\"
+    }
+
     localProperties.withOutputStream {
       it << "$SDK_DIR_PROPERTY=$path"
     }
