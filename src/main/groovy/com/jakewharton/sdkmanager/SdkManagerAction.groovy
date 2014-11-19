@@ -39,11 +39,6 @@ class SdkManagerAction implements Action<Project>  {
 
 	// Defer resolving SDK package dependencies until after the model is finalized.
     project.afterEvaluate {
-      if ( !hasAndroidPlugin( project ) ) {
-	    log.debug 'No Android plugin detecting. Skipping package resolution.'
-        return
-      }
-
       time "Package resolve", {
 			  PackageResolver.resolve project, sdk
 		  }

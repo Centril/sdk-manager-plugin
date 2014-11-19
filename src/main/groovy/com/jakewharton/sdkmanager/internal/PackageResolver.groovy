@@ -13,12 +13,33 @@ import static com.android.SdkConstants.FD_M2_REPOSITORY
 import static com.android.SdkConstants.FD_PLATFORMS
 import static com.android.SdkConstants.FD_ADDONS
 import static com.android.SdkConstants.FD_PLATFORM_TOOLS
+import static com.jakewharton.sdkmanager.internal.Util.hasAndroidPlugin
 
+/**
+ * {@link PackageResolver} resolves, verifies and downloads (if missing)
+ * the build tools (1), platform tools, compile version (1),
+ * support libraries, google play services libraries.
+ *
+ * (1): only resolved if applied on a project on which
+ * an android plugin (app/library) has been applied on.
+ */
 class PackageResolver {
+  /**
+   * Resolves packages for project with the android SDK expected at sdk.
+   *
+   * @param project The {@link Project} to resolve for.
+   * @param sdk The android SDK path is expected in this path.
+   */
   static void resolve(Project project, File sdk) {
     new PackageResolver(project, sdk, new AndroidCommand.Real(sdk, new System.Real())).resolve()
   }
 
+  /**
+   * Checks if the given folder exists and is non-empty.
+   *
+   * @param folder the folder to check.
+   * @return true if it existed and was non-empty.
+   */
   static boolean folderExists(File folder) {
     return folder.exists() && folder.list().length != 0
   }
@@ -37,6 +58,14 @@ class PackageResolver {
   final File googleRepositoryDir
   final AndroidCommand androidCommand
 
+  /**
+   * Constructs a {@link PackageResolver} given a project to resolve for,
+   * a android sdk path, and an {@link AndroidCommand} to use.
+   *
+   * @param project The {@link Project} to resolve for.
+   * @param sdk The android SDK path is expected in this path.
+   * @param androidCommand The {@link AndroidCommand} to use for running commands against the SDK.
+   */
   PackageResolver(Project project, File sdk, AndroidCommand androidCommand) {
     this.sdk = sdk
     this.project = project
@@ -54,14 +83,41 @@ class PackageResolver {
     googleRepositoryDir = new File(googleExtrasDir, FD_M2_REPOSITORY)
   }
 
+  /**
+   * Resolves everything that can be resolved and skips what can't.
+   * @see PackageResolver PackageResolver for notes about what is resolved when.
+   */
   def resolve() {
-    resolveBuildTools()
-    resolvePlatformTools()
-    resolveCompileVersion()
-    resolveSupportLibraryRepository()
-    resolvePlayServiceRepository()
+    resolving('build-tools', true, this.&resolveBuildTools)
+    resolving('platform-tools', false, this.&resolvePlatformTools)
+    resolving('compile-version', true, this.&resolveCompileVersion)
+    resolving('support-library', false, this.&resolveSupportLibraryRepository)
+    resolving('play-services', false, this.&resolvePlayServiceRepository)
   }
 
+  /**
+   * Conditionally runs a "resolving" closure under name.
+   * The closure is skipped if android was required,
+   * but the android plugin wasn't applied.
+   *
+   * @param name The name to give the closure to run.
+   * @param requireAndroid Whether or not to require that the
+   *                       android plugin be applied for the closure to run.
+   * @param closure The closure to run should the conditions for running be met.
+   */
+  def resolving( String name, boolean requireAndroid, Closure closure ) {
+    if ( requireAndroid && !hasAndroidPlugin( project ) ) {
+      log.debug "Skipping: $name, no android plugin detected"
+    } else {
+      log.debug "Resolving: $name"
+      closure()
+    }
+  }
+
+  /**
+   * Resolves the build tools using the revision specified in android.buildToolsRevision.
+   * If missing, the revision will be downloaded.
+   */
   def resolveBuildTools() {
     def buildToolsRevision = project.android.buildToolsRevision
     log.debug "Build tools version: $buildToolsRevision"
@@ -80,6 +136,9 @@ class PackageResolver {
     }
   }
 
+  /**
+   * Resolves the platform tools and downloads them if missing.
+   */
   def resolvePlatformTools() {
     if (folderExists(platformToolsDir)) {
       log.debug 'Platform tools found!'
@@ -94,6 +153,10 @@ class PackageResolver {
     }
   }
 
+  /**
+   * Resolves the compile version downloads it if missing.
+   * Additionally, the google SDK is installed if missing.
+   */
   def resolveCompileVersion() {
     String compileVersion = project.android.compileSdkVersion
     log.debug "Compile API version: $compileVersion"
@@ -113,6 +176,12 @@ class PackageResolver {
     }
   }
 
+  /**
+   * Installs compilation API version at baseDir if not already installed.
+   *
+   * @param baseDir where the compilation API versions are stored.
+   * @param version the compilation API version that will be installed if needed.
+   */
   def installIfMissing(baseDir, version) {
     def existingDir = new File(baseDir, version)
     if (folderExists(existingDir)) {
@@ -128,6 +197,13 @@ class PackageResolver {
     }
   }
 
+  /**
+   * Resolves the support libraries if the project
+   * applied upon has one of them as a dependency.
+   *
+   * If missing, they will be downloaded, as well
+   * as using that path as a local maven repository.
+   */
   def resolveSupportLibraryRepository() {
     def supportLibraryDeps = findDependenciesWithGroup 'com.android.support'
     if (supportLibraryDeps.isEmpty()) {
@@ -158,6 +234,13 @@ class PackageResolver {
     }
   }
 
+  /**
+   * Resolves the google play services if the project
+   * applied upon has one of them as a dependency.
+   *
+   * If missing, they will be downloaded, as well
+   * as using that path as a local maven repository.
+   */
   def resolvePlayServiceRepository() {
     def playServicesDeps = findDependenciesWithGroup 'com.google.android.gms'
     if (playServicesDeps.isEmpty()) {
@@ -194,6 +277,12 @@ class PackageResolver {
     }
   }
 
+  /**
+   * Finds all dependencies in all configurations that has group.
+   *
+   * @param group The group to match on.
+   * @return The list of dependencies.
+   */
   def findDependenciesWithGroup(String group) {
     def deps = []
     for (Configuration configuration : project.configurations) {
@@ -206,6 +295,13 @@ class PackageResolver {
     return deps
   }
 
+  /**
+   * Checks if the dependencies given by deps
+   * is actually available on the file system.
+   *
+   * @param deps The dependencies to check.
+   * @return true if available.
+   */
   def dependenciesAvailable(def deps) {
     try {
       project.configurations.detachedConfiguration(deps as Dependency[]).files
