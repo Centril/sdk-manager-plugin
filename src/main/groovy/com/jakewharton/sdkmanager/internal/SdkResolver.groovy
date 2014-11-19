@@ -11,7 +11,22 @@ import static com.android.SdkConstants.PLATFORM_WINDOWS
 import static com.android.SdkConstants.SDK_DIR_PROPERTY
 import static com.android.SdkConstants.currentPlatform
 
+/**
+ * {@link SdkResolver} resolves the android SDK and stores the
+ * path of the local copy downloaded in the file: local.properties.
+ * The SDK is only downloaded if it is not found.
+ */
 class SdkResolver {
+  /**
+   * Resolve the SDK given a gradle {@link Project}
+   * for which a local.properties file will written to
+   * its root if it is not already present. This file
+   * contains the same path as the File instance returned
+   * by {@link #resolve(org.gradle.api.Project)}.
+   *
+   * @param project the gradle {@link Project}.
+   * @return the SDK path as a {@link File}.
+   */
   static File resolve(Project project) {
     boolean isWindows = currentPlatform() == PLATFORM_WINDOWS
     return new SdkResolver(project, new System.Real(), new Downloader.Real(), isWindows).resolve()
@@ -26,6 +41,14 @@ class SdkResolver {
   final File localProperties
   final boolean isWindows
 
+  /**
+   * Constructs a SdkResolver.
+   *
+   * @param project the gradle {@link Project}.
+   * @param system An instance of {@link System}.
+   * @param downloader An instance of {@link Downloader}.
+   * @param isWindows if true, the current platform is Windows.
+   */
   SdkResolver(Project project, System system, Downloader downloader, boolean isWindows) {
     this.project = project
     this.system = system
@@ -38,6 +61,10 @@ class SdkResolver {
     localProperties = new File(project.rootDir, FN_LOCAL_PROPERTIES)
   }
 
+  /**
+   * Resolves the file.
+   * @see #resolve(org.gradle.api.Project)
+   */
   File resolve() {
     // Check for existing local.properties file and the SDK it points to.
     if (localProperties.exists()) {
@@ -88,6 +115,11 @@ class SdkResolver {
     return userAndroid
   }
 
+  /**
+   * Downloads the android SDK.
+   *
+   * @param target the path where the SDK should be downloaded to.
+   */
   def downloadSdk(File target) {
     log.lifecycle 'Android SDK not found. Downloading...'
 
@@ -98,6 +130,11 @@ class SdkResolver {
     writeLocalProperties target.absolutePath
   }
 
+  /**
+   * Writes the path of the downloaded android sdk to a local.properties file.
+   *
+   * @param path the path of the downloaded android sdk.
+   */
   def writeLocalProperties(String path) {
     if (isWindows) {
       // Escape Windows file separators when writing as a path.
